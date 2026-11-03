@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#071a16">
+<title>Z0nar · Repelente Ultrasónico</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(circle at 50% -10%, #10453a 0%, #0a2620 40%, #04100d 100%);
+    color:#e6fff7;
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display:flex;justify-content:center;
+    min-height:100dvh;padding:18px 14px 40px;overflow-x:hidden;
+  }
+
+  .app{
+    width:min(560px,100%);
+    display:flex;flex-direction:column;align-items:center;gap:16px;
+  }
+
+  /* ---------- Header ---------- */
+  header{text-align:center;width:100%}
+  h1{
+    font-size:clamp(22px,6vw,28px);font-weight:700;letter-spacing:-0.5px;
+    background:linear-gradient(90deg,#7dffd0,#37e6a8,#1fd1ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{font-size:13px;color:#7fb8a8;margin-top:4px;letter-spacing:0.5px}
+
+  /* ---------- Escenario ---------- */
+  .stage{
+    position:relative;
+    width:min(62vw,240px);aspect-ratio:1;
+    display:grid;place-items:center;margin-top:8px;
+  }
+  #viz{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+
+  .ring{
+    position:absolute;inset:12%;border-radius:50%;
+    border:2px solid rgba(55,230,168,.75);
+    opacity:0;pointer-events:none;z-index:2;
+  }
+  .stage.on .ring{animation:pulse 2.6s cubic-bezier(.2,.7,.4,1) infinite}
+  .stage.on .ring:nth-of-type(2){animation-delay:.85s}
+  .stage.on .ring:nth-of-type(3){animation-delay:1.7s}
+  @keyframes pulse{
+    0%{transform:scale(.45);opacity:.85}
+    100%{transform:scale(1.45);opacity:0}
+  }
+
+  /* ---------- Icono de peste animado ---------- */
+  .pest-icon{
+    position:absolute;inset:0;display:grid;place-items:center;
+    pointer-events:none;z-index:4;
+    transition:opacity .7s ease, transform .5s ease;
+  }
+  .pest-icon span{
+    font-size:clamp(34px,9vw,52px);display:block;
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.7));
+    animation:fly 11s ease-in-out infinite;
+  }
+  @keyframes fly{
+    0%,100%{transform:translate(-45px,-48px) rotate(-12deg)}
+    20%{transform:translate(52px,-36px) rotate(14deg)}
+    40%{transform:translate(32px,54px) rotate(-6deg)}
+    60%{transform:translate(-55px,32px) rotate(10deg)}
+    80%{transform:translate(6px,-60px) rotate(-4deg)}
+  }
+  .stage.on .pest-icon{opacity:0;transform:scale(.6)}
+
+  /* ---------- Botón de encendido ---------- */
+  .power{
+    position:relative;z-index:3;
+    width:44%;aspect-ratio:1;border-radius:50%;
+    border:1px solid rgba(55,230,168,.45);
+    background:radial-gradient(circle at 32% 26%,rgba(55,230,168,.30),rgba(6,34,28,.95) 72%);
+    color:#37e6a8;cursor:pointer;
+    display:grid;place-items:center;
+    transition:transform .18s ease,box-shadow .4s ease,border-color .4s ease,color .4s ease;
+    box-shadow:inset 0 0 34px rgba(55,230,168,.14),0 8px 30px rgba(0,0,0,.45);
+  }
+  .power:active{transform:scale(.94)}
+  .power.on{
+    border-color:#37e6a8;color:#f0fffa;
+    box-shadow:0 0 48px rgba(55,230,168,.55),inset 0 0 44px rgba(55,230,168,.35);
+  }
+  .power svg{transition:transform .4s ease}
+  .power.on svg{transform:rotate(0deg) scale(1.05)}
+
+  /* ---------- Estado ---------- */
+  .status{
+    font-size:13px;letter-spacing:0.5px;font-weight:500;
+    color:#6e9a8d;transition:color .35s;text-align:center;padding:0 10px;
+  }
+  .status.live{color:#37e6a8;text-shadow:0 0 14px rgba(55,230,168,.4)}
+
+  /* ---------- Estilo Apple: Tabs de categorías (con flechas) ---------- */
+  .tabs-container{
+    width:100%;position:relative;display:flex;align-items:center;
+    background:rgba(255,255,255,.03);
+    border-radius:16px;padding:4px;
+    border:1px solid rgba(55,230,168,.1);
+    margin-top:8px;
+  }
+  .nav-arrow{
+    background:rgba(55,230,168,.1);border:none;color:#37e6a8;
+    width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;flex:0 0 auto;font-size:16px;margin:0 4px;
+    transition:background .2s;z-index:2;
+  }
+  .nav-arrow:hover{background:rgba(55,230,168,.2)}
+  .nav-arrow:active{transform:scale(0.9)}
+
+  .tabs-scroll{
+    flex:1;overflow-x:auto;
+    display:flex;gap:2px;padding:2px;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+    scroll-behavior:smooth;
+  }
+  .tabs-scroll::-webkit-scrollbar{display:none}
+
+  .tab{
+    flex:0 0 auto;padding:8px 14px;border-radius:12px;
+    background:transparent;border:none;
+    color:#7fb8a8;font-size:13px;font-weight:500;
+    cursor:pointer;transition:all .2s;white-space:nowrap;
+    font-family:inherit;display:flex;align-items:center;gap:6px;
+  }
+  .tab:hover{color:#b9ffe6;background:rgba(255,255,255,.05)}
+  .tab.active{
+    background:rgba(55,230,168,.15);
+    color:#37e6a8;
+    box-shadow:0 1px 3px rgba(0,0,0,.2);
+    font-weight:600;
+  }
+  .tab .ico{font-size:16px;line-height:1}
+
+  /* ---------- Panel principal (Estilo Apple List) ---------- */
+  .panel{
+    width:100%;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(55,230,168,.12);
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 4px 20px rgba(0,0,0,.2);
+    margin-top:12px;
+  }
+
+  .panel-title{
+    font-size:12px;font-weight:600;color:#7fb8a8;
+    text-transform:uppercase;letter-spacing:0.5px;
+    padding:14px 16px 8px;
+    display:flex;align-items:center;gap:6px;
+  }
+
+  /* ---------- Subsecciones (Lista Apple) ---------- */
+  .section{display:none;width:100%;flex-direction:column}
+  .section.active{display:flex}
+
+  .species-group{
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .species-group:last-child{border-bottom:none}
+
+  .species-row{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;cursor:pointer;
+    transition:background .15s;
+    background:transparent;border:none;width:100%;text-align:left;
+    font-family:inherit;color:inherit;
+  }
+  .species-row:hover{background:rgba(55,230,168,.05)}
+  .species-row.active{background:rgba(55,230,168,.1)}
+  
+  .species-info{
+    display:flex;align-items:center;gap:12px;
+  }
+  .species-icon-badge{
+    width:32px;height:32px;border-radius:8px;
+    background:rgba(255,255,255,.05);
+    display:grid;place-items:center;font-size:16px;
+    border:1px solid rgba(255,255,255,.05);
+  }
+  .species-row.active .species-icon-badge{
+    background:rgba(55,230,168,.2);border-color:rgba(55,230,168,.3);
+  }
+  
+  .species-text{display:flex;flex-direction:column;gap:2px}
+  .species-name{font-size:14px;font-weight:500;color:#e6fff7}
+  .species-freq{font-size:11px;color:#7fb8a8;font-variant-numeric:tabular-nums}
+  .species-row.active .species-name{color:#37e6a8;font-weight:600}
+
+  /* Controles dentro del panel */
+  .controls-group{
+    padding:16px;
+    display:flex;flex-direction:column;gap:16px;
+    background:rgba(0,0,0,.15);
+    border-top:1px solid rgba(255,255,255,.05);
+  }
+  .row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+  .row label{color:#a9d6c8;font-weight:500}
+  .val{color:#37e6a8;font-weight:600;font-variant-numeric:tabular-nums}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:4px;
+    border-radius:99px;outline:none;cursor:pointer;
+    background:linear-gradient(90deg,#37e6a8 0%,#37e6a8 var(--p,50%),rgba(255,255,255,.1) var(--p,50%),rgba(255,255,255,.1) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+    background:#fff;border:1px solid #ccc;
+    box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;
+  }
+  input[type=range]::-moz-range-track{height:4px;border-radius:99px;background:transparent}
+  input[type=range]::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:#fff;
+    border:1px solid #ccc;box-shadow:0 1px 4px rgba(0,0,0,.3);cursor:pointer;
+  }
+
+  /* Switch estilo Apple */
+  .switch{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;width:100%}
+  .switch-label{font-size:13px;color:#a9d6c8;font-weight:500}
+  .switch input{position:absolute;opacity:0;pointer-events:none}
+  .track{
+    position:relative;width:44px;height:26px;border-radius:99px;
+    background:rgba(255,255,255,.1);transition:.3s;flex:0 0 auto;
+  }
+  .knob{
+    position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;
+    background:#fff;transition:.3s;box-shadow:0 2px 4px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .track{background:#37e6a8}
+  .switch input:checked + .track .knob{transform:translateX(18px)}
+
+  /* ---------- Aviso ---------- */
+  .notice{
+    width:100%;
+    background:rgba(255,180,60,.05);
+    border:1px solid rgba(255,180,60,.15);
+    border-radius:14px;padding:12px 14px;
+    font-size:11.5px;line-height:1.5;color:#e8c98a;
+    display:flex;gap:10px;align-items:flex-start;
+    margin-top:8px;
+  }
+  .notice .ico{flex:0 0 auto;font-size:16px;line-height:1.2}
+  .notice strong{color:#ffd98a}
+  
+  /* Ajustes para PC */
+  @media (min-width: 600px) {
+    .app { width: 640px; }
+    .stage { width: 220px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Z0nar</h1>
+    <p>Repelente ultrasónico multi-especie</p>
+  </header>
+
+  <!-- ===== Escenario ===== -->
+  <div class="stage" id="stage">
+    <canvas id="viz"></canvas>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="ring"></div>
+    <div class="pest-icon" id="pestIcon"><span>🦟</span></div>
+    <button class="power" id="power" aria-label="Encender">
+      <svg viewBox="0 0 24 24" width="38" height="38" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M12 3.5v8.5"/>
+        <path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="status" id="status">Apagado · Aedes aegypti</div>
+
+  <!-- ===== Tabs de categorías (Estilo Apple con flechas) ===== -->
+  <div class="tabs-container">
+    <button class="nav-arrow" id="navLeft" aria-label="Anterior">&#10094;</button>
+    <div class="tabs-scroll" id="tabsScroll">
+      <button class="tab active" data-cat="mosquitos" data-icon="🦟"><span class="ico">🦟</span>Mosquitos</button>
+      <button class="tab" data-cat="moscas" data-icon="🪰"><span class="ico">🪰</span>Moscas</button>
+      <button class="tab" data-cat="roedores" data-icon="🐀"><span class="ico">🐀</span>Roedores</button>
+      <button class="tab" data-cat="cucarachas" data-icon="🪳"><span class="ico">🪳</span>Cucarachas</button>
+      <button class="tab" data-cat="aracnidos" data-icon="🕷️"><span class="ico">🕷️</span>Arácnidos</button>
+      <button class="tab" data-cat="reptiles" data-icon="🦎"><span class="ico">🦎</span>Reptiles</button>
+      <button class="tab" data-cat="murcielagos" data-icon="🦇"><span class="ico">🦇</span>Murciélagos</button>
+      <button class="tab" data-cat="anfibios" data-icon="🐸"><span class="ico">🐸</span>Anfibios</button>
+      <button class="tab" data-cat="domesticos" data-icon="🐕"><span class="ico">🐕</span>Domésticos</button>
+    </div>
+    <button class="nav-arrow" id="navRight" aria-label="Siguiente">&#10095;</button>
+  </div>
+
+  <!-- ===== Panel principal (Lista Apple) ===== -->
+  <div class="panel">
+
+    <!-- === Sección: Mosquitos === -->
+    <div class="section active" data-sec="mosquitos">
+      <div class="panel-title"><span>🦟</span> Familia Culicidae</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="17000" data-icon="🦟" data-name="Aedes aegypti">
+          <div class="species-info">
+            <div class="species-icon-badge">🦟</div>
+            <div class="species-text"><span class="species-name">Aedes aegypti</span><span class="species-freq">17.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="15000" data-icon="🦟" data-name="Culex pipiens">
+          <div class="species-info">
+            <div class="species-icon-badge">🦟</div>
+            <div class="species-text"><span class="species-name">Culex pipiens</span><span class="species-freq">15.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="19500" data-icon="🦟" data-name="Anopheles">
+          <div class="species-info">
+            <div class="species-icon-badge">🦟</div>
+            <div class="species-text"><span class="species-name">Anopheles</span><span class="species-freq">19.5 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="21000" data-icon="🦟" data-name="Aedes albopictus">
+          <div class="species-info">
+            <div class="species-icon-badge">🦟</div>
+            <div class="species-text"><span class="species-name">Aedes albopictus (Tigre)</span><span class="species-freq">21.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Moscas === -->
+    <div class="section" data-sec="moscas">
+      <div class="panel-title"><span>🪰</span> Orden Diptera</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="18000" data-icon="🪰" data-name="Musca domestica">
+          <div class="species-info">
+            <div class="species-icon-badge">🪰</div>
+            <div class="species-text"><span class="species-name">Mosca doméstica</span><span class="species-freq">18.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="20000" data-icon="🪰" data-name="Mosca de la fruta">
+          <div class="species-info">
+            <div class="species-icon-badge">🪰</div>
+            <div class="species-text"><span class="species-name">Mosca de la fruta</span><span class="species-freq">20.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="16000" data-icon="🪰" data-name="Mosca negra">
+          <div class="species-info">
+            <div class="species-icon-badge">🪰</div>
+            <div class="species-text"><span class="species-name">Mosca negra</span><span class="species-freq">16.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="22000" data-icon="🪰" data-name="Mosca del establo">
+          <div class="species-info">
+            <div class="species-icon-badge">🪰</div>
+            <div class="species-text"><span class="species-name">Mosca del establo</span><span class="species-freq">22.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Roedores === -->
+    <div class="section" data-sec="roedores">
+      <div class="panel-title"><span>🐀</span> Orden Rodentia</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="22000" data-icon="🐀" data-name="Rattus norvegicus">
+          <div class="species-info">
+            <div class="species-icon-badge">🐀</div>
+            <div class="species-text"><span class="species-name">Rata común</span><span class="species-freq">22.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="20000" data-icon="🐁" data-name="Mus musculus">
+          <div class="species-info">
+            <div class="species-icon-badge">🐁</div>
+            <div class="species-text"><span class="species-name">Ratón doméstico</span><span class="species-freq">20.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="23000" data-icon="🐀" data-name="Rattus rattus">
+          <div class="species-info">
+            <div class="species-icon-badge">🐀</div>
+            <div class="species-text"><span class="species-name">Rata de tejado</span><span class="species-freq">23.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="18000" data-icon="🐁" data-name="Ratón de campo">
+          <div class="species-info">
+            <div class="species-icon-badge">🐁</div>
+            <div class="species-text"><span class="species-name">Ratón de campo</span><span class="species-freq">18.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Cucarachas === -->
+    <div class="section" data-sec="cucarachas">
+      <div class="panel-title"><span>🪳</span> Orden Blattodea</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="19500" data-icon="🪳" data-name="Blattella germanica">
+          <div class="species-info">
+            <div class="species-icon-badge">🪳</div>
+            <div class="species-text"><span class="species-name">Cucaracha alemana</span><span class="species-freq">19.5 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="21000" data-icon="🪳" data-name="Periplaneta americana">
+          <div class="species-info">
+            <div class="species-icon-badge">🪳</div>
+            <div class="species-text"><span class="species-name">Cucaracha americana</span><span class="species-freq">21.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="17000" data-icon="🪳" data-name="Blatta orientalis">
+          <div class="species-info">
+            <div class="species-icon-badge">🪳</div>
+            <div class="species-text"><span class="species-name">Cucaracha oriental</span><span class="species-freq">17.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="18500" data-icon="🪳" data-name="Supella longipalpa">
+          <div class="species-info">
+            <div class="species-icon-badge">🪳</div>
+            <div class="species-text"><span class="species-name">Cucaracha listada</span><span class="species-freq">18.5 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Arácnidos === -->
+    <div class="section" data-sec="aracnidos">
+      <div class="panel-title"><span>🕷️</span> Clase Arachnida</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="18000" data-icon="🕷️" data-name="Araña doméstica">
+          <div class="species-info">
+            <div class="species-icon-badge">🕷️</div>
+            <div class="species-text"><span class="species-name">Araña doméstica</span><span class="species-freq">18.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="16000" data-icon="🦂" data-name="Escorpión">
+          <div class="species-info">
+            <div class="species-icon-badge">🦂</div>
+            <div class="species-text"><span class="species-name">Escorpión</span><span class="species-freq">16.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="20000" data-icon="🕷️" data-name="Araña lobo">
+          <div class="species-info">
+            <div class="species-icon-badge">🕷️</div>
+            <div class="species-text"><span class="species-name">Araña lobo</span><span class="species-freq">20.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="14000" data-icon="🕷️" data-name="Garrapata">
+          <div class="species-info">
+            <div class="species-icon-badge">🕷️</div>
+            <div class="species-text"><span class="species-name">Garrapata</span><span class="species-freq">14.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Reptiles === -->
+    <div class="section" data-sec="reptiles">
+      <div class="panel-title"><span>🦎</span> Clase Reptilia</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="14000" data-icon="🐍" data-name="Serpiente">
+          <div class="species-info">
+            <div class="species-icon-badge">🐍</div>
+            <div class="species-text"><span class="species-name">Serpiente</span><span class="species-freq">14.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="12000" data-icon="🦎" data-name="Lagartija">
+          <div class="species-info">
+            <div class="species-icon-badge">🦎</div>
+            <div class="species-text"><span class="species-name">Lagartija</span><span class="species-freq">12.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="13000" data-icon="🦎" data-name="Gecko">
+          <div class="species-info">
+            <div class="species-icon-badge">🦎</div>
+            <div class="species-text"><span class="species-name">Gecko</span><span class="species-freq">13.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="15000" data-icon="🐢" data-name="Tortuga">
+          <div class="species-info">
+            <div class="species-icon-badge">🐢</div>
+            <div class="species-text"><span class="species-name">Tortuga</span><span class="species-freq">15.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Murciélagos === -->
+    <div class="section" data-sec="murcielagos">
+      <div class="panel-title"><span>🦇</span> Orden Chiroptera</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="22000" data-icon="🦇" data-name="Murciélago común">
+          <div class="species-info">
+            <div class="species-icon-badge">🦇</div>
+            <div class="species-text"><span class="species-name">Murciélago común</span><span class="species-freq">22.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="24000" data-icon="🦇" data-name="Murciélago frugívoro">
+          <div class="species-info">
+            <div class="species-icon-badge">🦇</div>
+            <div class="species-text"><span class="species-name">Murciélago frugívoro</span><span class="species-freq">24.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="20000" data-icon="🦇" data-name="Murciélago de cueva">
+          <div class="species-info">
+            <div class="species-icon-badge">🦇</div>
+            <div class="species-text"><span class="species-name">Murciélago de cueva</span><span class="species-freq">20.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="25000" data-icon="🦇" data-name="Murciélago vampiro">
+          <div class="species-info">
+            <div class="species-icon-badge">🦇</div>
+            <div class="species-text"><span class="species-name">Murciélago vampiro</span><span class="species-freq">25.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Anfibios === -->
+    <div class="section" data-sec="anfibios">
+      <div class="panel-title"><span>🐸</span> Clase Amphibia</div>
+      <div class="species-group">
+        <button class="species-row active" data-f="13000" data-icon="🐸" data-name="Rana común">
+          <div class="species-info">
+            <div class="species-icon-badge">🐸</div>
+            <div class="species-text"><span class="species-name">Rana común</span><span class="species-freq">13.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="11000" data-icon="🐸" data-name="Sapo">
+          <div class="species-info">
+            <div class="species-icon-badge">🐸</div>
+            <div class="species-text"><span class="species-name">Sapo</span><span class="species-freq">11.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="12000" data-icon="🦎" data-name="Salamandra">
+          <div class="species-info">
+            <div class="species-icon-badge">🦎</div>
+            <div class="species-text"><span class="species-name">Salamandra</span><span class="species-freq">12.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="14000" data-icon="🐸" data-name="Rana arbórea">
+          <div class="species-info">
+            <div class="species-icon-badge">🐸</div>
+            <div class="species-text"><span class="species-name">Rana arbórea</span><span class="species-freq">14.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Sección: Domésticos === -->
+    <div class="section" data-sec="domesticos">
+      <div class="panel-title"><span>🐕</span> Mascotas y Corral</div>
+      
+      <div class="species-group" style="border-bottom:none">
+        <button class="species-row active" data-f="13000" data-icon="🐕" data-name="Perro mediano">
+          <div class="species-info">
+            <div class="species-icon-badge">🐕</div>
+            <div class="species-text"><span class="species-name">Perro mediano</span><span class="species-freq">13.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="11000" data-icon="🐕" data-name="Perro pequeño">
+          <div class="species-info">
+            <div class="species-icon-badge">🐕</div>
+            <div class="species-text"><span class="species-name">Perro pequeño</span><span class="species-freq">11.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="15000" data-icon="🐕" data-name="Perro grande">
+          <div class="species-info">
+            <div class="species-icon-badge">🐕</div>
+            <div class="species-text"><span class="species-name">Perro grande</span><span class="species-freq">15.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="14000" data-icon="🐈" data-name="Gato adulto">
+          <div class="species-info">
+            <div class="species-icon-badge">🐈</div>
+            <div class="species-text"><span class="species-name">Gato adulto</span><span class="species-freq">14.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="12000" data-icon="🐈" data-name="Gato joven">
+          <div class="species-info">
+            <div class="species-icon-badge">🐈</div>
+            <div class="species-text"><span class="species-name">Gato joven</span><span class="species-freq">12.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="9000" data-icon="🐔" data-name="Gallina">
+          <div class="species-info">
+            <div class="species-icon-badge">🐔</div>
+            <div class="species-text"><span class="species-name">Gallina</span><span class="species-freq">9.0 kHz</span></div>
+          </div>
+        </button>
+        <button class="species-row" data-f="8000" data-icon="🦆" data-name="Pato">
+          <div class="species-info">
+            <div class="species-icon-badge">🦆</div>
+            <div class="species-text"><span class="species-name">Pato</span><span class="species-freq">8.0 kHz</span></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- === Controles globales === -->
+    <div class="controls-group">
+      <div class="row">
+        <label for="freq">Frecuencia</label>
+        <span class="val" id="freqVal">17.0 kHz</span>
+      </div>
+      <input type="range" id="freq" min="8000" max="25000" step="100" value="17000">
+
+      <div class="row">
+        <label for="vol">Volumen</label>
+        <span class="val" id="volVal">15 %</span>
+      </div>
+      <input type="range" id="vol" min="0" max="60" step="1" value="15">
+
+      <label class="switch">
+        <span class="switch-label">Barrido automático</span>
+        <input type="checkbox" id="sweep">
+        <span class="track"><span class="knob"></span></span>
+      </label>
+    </div>
+
+  </div>
+
+  <!-- ===== Aviso ===== -->
+  <div class="notice">
+    <span class="ico">⚠️</span>
+    <div><strong>Usa con moderación.</strong> No todos los dispositivos reproducen ultrasonidos &gt;18 kHz. Evita sesiones prolongadas y no lo uses cerca de mascotas sensibles sin supervisión.</div>
+  </div>
+
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ================= Referencias ================= */
+  const stage     = document.getElementById('stage');
+  const powerBtn  = document.getElementById('power');
+  const statusEl  = document.getElementById('status');
+  const pestIcon  = document.getElementById('pestIcon');
+  const freqSlide = document.getElementById('freq');
+  const freqVal   = document.getElementById('freqVal');
+  const volSlide  = document.getElementById('vol');
+  const volVal    = document.getElementById('volVal');
+  const sweepChk  = document.getElementById('sweep');
+  const canvas    = document.getElementById('viz');
+  const vctx      = canvas.getContext('2d');
+  const tabsScroll= document.getElementById('tabsScroll');
+  const navLeft   = document.getElementById('navLeft');
+  const navRight  = document.getElementById('navRight');
+
+  /* ================= Estado ================= */
+  let audioCtx = null, osc = null, gainN = null, analyser = null;
+  let lfo = null, lfoGain = null, dataArr = null;
+  let playing = false;
+  let volume = 0.15;
+  let smooth = 0;
+  let currentSpecies = { name: 'Aedes aegypti', icon: '🦟' };
+
+  /* ================= Audio ================= */
+  function ensureAudio() {
+    if (audioCtx) return;
+
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+
+    osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = +freqSlide.value;
+
+    gainN = audioCtx.createGain();
+    gainN.gain.value = 0;
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    dataArr = new Uint8Array(analyser.fftSize);
+
+    lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.7;
+    lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = sweepChk.checked ? 500 : 0;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    osc.connect(gainN);
+    gainN.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    lfo.start();
+    osc.start();
+  }
+
+  async function start() {
+    ensureAudio();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    const t = audioCtx.currentTime;
+    gainN.gain.cancelScheduledValues(t);
+    gainN.gain.setValueAtTime(gainN.gain.value, t);
+    gainN.gain.linearRampToValueAtTime(volume, t + 0.15);
+
+    playing = true;
+    updateUI();
+    if (navigator.vibrate) navigator.vibrate(12);
+  }
+
+  function stop() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    gainN.gain.cancelScheduledValues(t);
+    gainN.gain.setValueAtTime(gainN.gain.value, t);
+    gainN.gain.linearRampToValueAtTime(0, t + 0.15);
+
+    playing = false;
+    updateUI();
+    if (navigator.vibrate) navigator.vibrate(8);
+  }
+
+  /* ================= UI ================= */
+  function paint(el) {
+    const min = +el.min, max = +el.max, v = +el.value;
+    el.style.setProperty('--p', ((v - min) / (max - min)) * 100 + '%');
+  }
+
+  function applyFreq() {
+    const f = +freqSlide.value;
+    freqVal.textContent = (f / 1000).toFixed(1) + ' kHz';
+    paint(freqSlide);
+
+    if (osc) osc.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.02);
+
+    if (playing) {
+      statusEl.textContent = `Emitiendo · ${currentSpecies.name} · ${(f / 1000).toFixed(1)} kHz`;
+    }
+  }
+
+  function applyVol() {
+    volume = +volSlide.value / 100;
+    volVal.textContent = volSlide.value + ' %';
+    paint(volSlide);
+    if (playing && gainN) {
+      gainN.gain.setTargetAtTime(volume, audioCtx.currentTime, 0.04);
+    }
+  }
+
+  function updateUI() {
+    stage.classList.toggle('on', playing);
+    powerBtn.classList.toggle('on', playing);
+    powerBtn.setAttribute('aria-label', playing ? 'Apagar' : 'Encender');
+    statusEl.classList.toggle('live', playing);
+
+    if (playing) {
+      statusEl.textContent = `Emitiendo · ${currentSpecies.name} · ${(+freqSlide.value / 1000).toFixed(1)} kHz`;
+    } else {
+      statusEl.textContent = `Apagado · ${currentSpecies.name}`;
+    }
+
+    pestIcon.innerHTML = `<span>${currentSpecies.icon}</span>`;
+  }
+
+  /* ================= Navegación de Tabs (flechas y scroll) ================= */
+  navLeft.addEventListener('click', () => {
+    tabsScroll.scrollBy({ left: -150, behavior: 'smooth' });
+  });
+  navRight.addEventListener('click', () => {
+    tabsScroll.scrollBy({ left: 150, behavior: 'smooth' });
+  });
+
+  /* ================= Cambio de pestaña ================= */
+  tabsScroll.addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+
+    const cat = tab.dataset.cat;
+
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+
+    document.querySelectorAll('.section').forEach(sec => {
+      sec.classList.toggle('active', sec.dataset.sec === cat);
+    });
+
+    const targetSection = document.querySelector(`.section[data-sec="${cat}"]`);
+    if (targetSection) {
+      const activeSpecies = targetSection.querySelector('.species-row.active') || targetSection.querySelector('.species-row');
+      if (activeSpecies) {
+        freqSlide.value = activeSpecies.dataset.f;
+        currentSpecies = {
+          name: activeSpecies.dataset.name,
+          icon: tab.dataset.icon || activeSpecies.dataset.icon
+        };
+        applyFreq();
+        updateUI();
+      }
+    }
+    
+    tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  });
+
+  /* ================= Selección de especie ================= */
+  document.querySelectorAll('.species-group').forEach(group => {
+    group.addEventListener('click', (e) => {
+      const btn = e.target.closest('.species-row');
+      if (!btn) return;
+
+      const section = btn.closest('.section');
+      section.querySelectorAll('.species-row').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      freqSlide.value = btn.dataset.f;
+      currentSpecies = { name: btn.dataset.name, icon: btn.dataset.icon };
+      applyFreq();
+      updateUI();
+
+      if (playing) {
+        statusEl.textContent = `Emitiendo · ${currentSpecies.name} · ${(+btn.dataset.f / 1000).toFixed(1)} kHz`;
+      } else {
+        statusEl.textContent = `Apagado · ${currentSpecies.name}`;
+      }
+    });
+  });
+
+  /* ================= Controles ================= */
+  powerBtn.addEventListener('click', () => {
+    playing ? stop() : start();
+  });
+
+  freqSlide.addEventListener('input', applyFreq);
+  volSlide.addEventListener('input', applyVol);
+
+  sweepChk.addEventListener('change', () => {
+    if (!lfoGain) return;
+    lfoGain.gain.setTargetAtTime(
+      sweepChk.checked ? 500 : 0,
+      audioCtx.currentTime,
+      0.06
+    );
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && playing) stop();
+  });
+
+  /* ================= Visualizador ================= */
+  function resizeCanvas() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, r.width * dpr);
+    canvas.height = Math.max(1, r.height * dpr);
+  }
+  window.addEventListener('resize', resizeCanvas);
+
+  function draw() {
+    requestAnimationFrame(draw);
+    const w = canvas.width, h = canvas.height;
+    if (!w || !h) return;
+
+    vctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) / 2;
+    const t = performance.now() / 1000;
+
+    let level = 0;
+    if (playing && analyser) {
+      analyser.getByteTimeDomainData(dataArr);
+      let sum = 0;
+      for (let i = 0; i < dataArr.length; i++) {
+        const v = (dataArr[i] - 128) / 128;
+        sum += v * v;
+      }
+      level = Math.sqrt(sum / dataArr.length);
+    }
+    const target = Math.min(level * 3.5, 1.6);
+    smooth += (target - smooth) * 0.14;
+
+    // Halo
+    const pulse = 1 + Math.sin(t * 2) * 0.015 + smooth * 0.12;
+    const glowR = R * 0.62 * pulse;
+    const grad = vctx.createRadialGradient(cx, cy, R * 0.12, cx, cy, glowR);
+    grad.addColorStop(0, `rgba(55,230,168,${0.08 + smooth * 0.20})`);
+    grad.addColorStop(1, 'rgba(55,230,168,0)');
+    vctx.fillStyle = grad;
+    vctx.beginPath();
+    vctx.arc(cx, cy, glowR, 0, Math.PI * 2);
+    vctx.fill();
+
+    // Onda deformada
+    const baseR = R * 0.52;
+    const amp = R * 0.012 + smooth * R * 0.075;
+    const N = 180;
+
+    vctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * Math.PI * 2 - Math.PI / 2;
+      const wob =
+        Math.sin(a * 3 + t * 2.2) * 0.5 +
+        Math.sin(a * 5 - t * 1.7) * 0.3 +
+        Math.sin(a * 7 + t * 3.1) * 0.2;
+      const r = baseR + wob * amp;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      i ? vctx.lineTo(x, y) : vctx.moveTo(x, y);
+    }
+    vctx.closePath();
+    vctx.strokeStyle = playing ? 'rgba(55,230,168,.9)' : 'rgba(55,230,168,.22)';
+    vctx.lineWidth = 2 * (window.devicePixelRatio || 1);
+    vctx.stroke();
+
+    // Anillo de guiones
+    vctx.save();
+    vctx.translate(cx, cy);
+    vctx.rotate(t * 0.35);
+    vctx.setLineDash([6, 16]);
+    vctx.strokeStyle = playing ? 'rgba(55,230,168,.38)' : 'rgba(55,230,168,.12)';
+    vctx.lineWidth = 1.6 * (window.devicePixelRatio || 1);
+    vctx.beginPath();
+    vctx.arc(0, 0, baseR * 1.24, 0, Math.PI * 2);
+    vctx.stroke();
+    vctx.restore();
+    vctx.setLineDash([]);
+  }
+
+  /* ================= Init ================= */
+  resizeCanvas();
+  paint(freqSlide);
+  paint(volSlide);
+  applyFreq();
+  applyVol();
+
+  const defaultActive = document.querySelector('.section.active .species-row.active');
+  if (defaultActive) {
+    currentSpecies = {
+      name: defaultActive.dataset.name,
+      icon: defaultActive.dataset.icon
+    };
+    freqSlide.value = defaultActive.dataset.f;
+    applyFreq();
+  }
+  updateUI();
+  draw();
+})();
+</script>
+</body>
+</html>
