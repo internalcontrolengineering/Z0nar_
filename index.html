@@ -8,17 +8,25 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
+  
+  /* CORRECCIÓN PRINCIPAL: Permitir scroll vertical en el body */
   body{
     background:radial-gradient(circle at 50% -10%, #10453a 0%, #0a2620 40%, #04100d 100%);
     color:#e6fff7;
     font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     display:flex;justify-content:center;
-    min-height:100dvh;padding:18px 14px 40px;overflow-x:hidden;
+    min-height:100dvh;
+    padding:18px 14px 40px;
+    overflow-x:hidden;
+    overflow-y:auto; /* Permite el desplazamiento vertical */
+    -webkit-overflow-scrolling: touch;
   }
 
   .app{
     width:min(560px,100%);
     display:flex;flex-direction:column;align-items:center;gap:16px;
+    /* Asegura que el contenedor no colapse y permita el flujo */
+    height: max-content;
   }
 
   /* ---------- Header ---------- */
@@ -35,6 +43,7 @@
     position:relative;
     width:min(62vw,240px);aspect-ratio:1;
     display:grid;place-items:center;margin-top:8px;
+    flex-shrink: 0; /* Evita que el escenario se comprima */
   }
   #viz{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 
@@ -94,6 +103,7 @@
   .status{
     font-size:13px;letter-spacing:0.5px;font-weight:500;
     color:#6e9a8d;transition:color .35s;text-align:center;padding:0 10px;
+    flex-shrink: 0;
   }
   .status.live{color:#37e6a8;text-shadow:0 0 14px rgba(55,230,168,.4)}
 
@@ -104,6 +114,7 @@
     border-radius:16px;padding:4px;
     border:1px solid rgba(55,230,168,.1);
     margin-top:8px;
+    flex-shrink: 0;
   }
   .nav-arrow{
     background:rgba(55,230,168,.1);border:none;color:#37e6a8;
@@ -148,6 +159,8 @@
     overflow:hidden;
     box-shadow:0 4px 20px rgba(0,0,0,.2);
     margin-top:12px;
+    /* Importante para que el panel fluya y muestre todo su contenido */
+    height: max-content;
   }
 
   .panel-title{
@@ -163,6 +176,7 @@
 
   .species-group{
     border-bottom:1px solid rgba(255,255,255,.05);
+    width: 100%;
   }
   .species-group:last-child{border-bottom:none}
 
@@ -184,6 +198,7 @@
     background:rgba(255,255,255,.05);
     display:grid;place-items:center;font-size:16px;
     border:1px solid rgba(255,255,255,.05);
+    flex-shrink: 0;
   }
   .species-row.active .species-icon-badge{
     background:rgba(55,230,168,.2);border-color:rgba(55,230,168,.3);
@@ -200,6 +215,7 @@
     display:flex;flex-direction:column;gap:16px;
     background:rgba(0,0,0,.15);
     border-top:1px solid rgba(255,255,255,.05);
+    width: 100%;
   }
   .row{display:flex;justify-content:space-between;align-items:center;font-size:13px}
   .row label{color:#a9d6c8;font-weight:500}
@@ -245,6 +261,7 @@
     font-size:11.5px;line-height:1.5;color:#e8c98a;
     display:flex;gap:10px;align-items:flex-start;
     margin-top:8px;
+    flex-shrink: 0;
   }
   .notice .ico{flex:0 0 auto;font-size:16px;line-height:1.2}
   .notice strong{color:#ffd98a}
